@@ -1,0 +1,315 @@
+;********************************************************************************************************
+;                                       uC/Probe Communication
+;
+;                    Copyright 2007-2020 Silicon Laboratories Inc. www.silabs.com
+;
+;                                 SPDX-License-Identifier: APACHE-2.0
+;
+;               This software is subject to an open source license and is distributed by
+;                Silicon Laboratories Inc. pursuant to the terms of the Apache License,
+;                    Version 2.0 available at www.apache.org/licenses/LICENSE-2.0.
+;
+;********************************************************************************************************
+
+;********************************************************************************************************
+;
+;                                            Renesas SH-2A (Non-FPU)
+;                                Renesas C/C++ Compiler Toolchain V.9.00.03.006
+;
+; File : OS_CPU_A.SRC
+;********************************************************************************************************
+
+        .EXPORT _ProbeRS232RxISR
+        .EXPORT _ProbeRS232TxISR
+        .EXPORT _ProbeRS232EriISR
+        .EXPORT _ProbeRS232BriISR
+        .IMPORT _OSIntNesting
+        .IMPORT _OSTCBCur
+        .IMPORT _OSIntExit
+        .IMPORT _ProbeRS232_RxISRHandler
+        .IMPORT _ProbeRS232_TxISRHandler
+        .IMPORT _ProbeRS232_BriISRHandler
+        .IMPORT _ProbeRS232_EriISRHandler
+
+
+                
+        
+        .SECTION    P,CODE,ALIGN=4
+
+_ProbeRS232TxISR:
+; Save processor registers on the stack
+        
+        sts.l   macl, @-r15
+        sts.l   mach, @-r15
+        stc.l   gbr, @-r15
+        sts.l   pr, @-r15
+        mov.l   r0, @-r15
+        mov.l   r1, @-r15
+        mov.l   r2, @-r15
+        mov.l   r3, @-r15
+        mov.l   r4, @-r15
+        mov.l   r5, @-r15
+        mov.l   r6, @-r15
+        mov.l   r7, @-r15
+        mov.l   r8, @-r15
+        mov.l   r9, @-r15
+        mov.l   r10, @-r15
+        mov.l   r11, @-r15
+        mov.l   r12, @-r15
+        mov.l   r13, @-r15
+        mov.l   r14, @-r15
+
+        mov.l    #_OSIntNesting, r1             ; Increment OSIntNesting
+        mov.b   @r1, r0
+        extu.b   r0, r0
+        add      #1, r0
+        mov.b    r0, @r1                        ; If OSIntNesting == 1 save the current stack pointer
+        tst      #1, r0                         ; onto the current task's stack
+        bt       _ProbeRS232TxISR1
+        
+        mov.l    #_OSTCBCur, r1                 ; Save current task's SP into its TCB
+        mov.l   @r1, r0
+        mov      r15, @r0
+
+_ProbeRS232TxISR1:
+        mov.l    #_ProbeRS232_TxISRHandler, r0
+        jsr     @r0                     
+        nop
+        
+        mov.l    #_OSIntExit, r0
+        jsr     @r0                             ; call OSIntExit()
+        nop
+
+; restore all processor registers from new task's stack
+
+        mov.l   @r15+, r14
+        mov.l   @r15+, r13
+        mov.l   @r15+, r12
+        mov.l   @r15+, r11
+        mov.l   @r15+, r10
+        mov.l   @r15+, r9
+        mov.l   @r15+, r8
+        mov.l   @r15+, r7
+        mov.l   @r15+, r6
+        mov.l   @r15+, r5
+        mov.l   @r15+, r4
+        mov.l   @r15+, r3
+        mov.l   @r15+, r2
+        mov.l   @r15+, r1
+        mov.l   @r15+, r0
+        lds.l   @r15+, pr
+        ldc.l   @r15+, gbr
+        lds.l   @r15+, mach
+        lds.l   @r15+, macl
+
+        rte                                     ; return from interrupt
+        nop
+        
+_ProbeRS232RxISR:
+; Save processor registers on the stack
+        
+        sts.l   macl, @-r15
+        sts.l   mach, @-r15
+        stc.l   gbr, @-r15
+        sts.l   pr, @-r15
+        mov.l   r0, @-r15
+        mov.l   r1, @-r15
+        mov.l   r2, @-r15
+        mov.l   r3, @-r15
+        mov.l   r4, @-r15
+        mov.l   r5, @-r15
+        mov.l   r6, @-r15
+        mov.l   r7, @-r15
+        mov.l   r8, @-r15
+        mov.l   r9, @-r15
+        mov.l   r10, @-r15
+        mov.l   r11, @-r15
+        mov.l   r12, @-r15
+        mov.l   r13, @-r15
+        mov.l   r14, @-r15
+
+        mov.l    #_OSIntNesting, r1             ; Increment OSIntNesting
+        mov.b   @r1, r0
+        extu.b   r0, r0
+        add      #1, r0
+        mov.b    r0, @r1                        ; If OSIntNesting == 1 save the current stack pointer
+        tst      #1, r0                         ; onto the current task's stack
+        bt       _ProbeRS232RxISR1
+        
+        mov.l    #_OSTCBCur, r1                 ; Save current task's SP into its TCB
+        mov.l   @r1, r0
+        mov      r15, @r0
+
+_ProbeRS232RxISR1:
+        mov.l    #_ProbeRS232_RxISRHandler, r0
+        jsr     @r0                     
+        nop
+        
+        mov.l    #_OSIntExit, r0
+        jsr     @r0                             ; call OSIntExit()
+        nop
+
+; restore all processor registers from new task's stack
+
+        mov.l   @r15+, r14
+        mov.l   @r15+, r13
+        mov.l   @r15+, r12
+        mov.l   @r15+, r11
+        mov.l   @r15+, r10
+        mov.l   @r15+, r9
+        mov.l   @r15+, r8
+        mov.l   @r15+, r7
+        mov.l   @r15+, r6
+        mov.l   @r15+, r5
+        mov.l   @r15+, r4
+        mov.l   @r15+, r3
+        mov.l   @r15+, r2
+        mov.l   @r15+, r1
+        mov.l   @r15+, r0
+        lds.l   @r15+, pr
+        ldc.l   @r15+, gbr
+        lds.l   @r15+, mach
+        lds.l   @r15+, macl
+
+        rte                                     ; return from interrupt
+        nop 
+
+_ProbeRS232BriISR:
+; Save processor registers on the stack
+         
+        sts.l   macl, @-r15
+        sts.l   mach, @-r15
+        stc.l   gbr, @-r15
+        sts.l   pr, @-r15
+        mov.l   r0, @-r15
+        mov.l   r1, @-r15
+        mov.l   r2, @-r15
+        mov.l   r3, @-r15
+        mov.l   r4, @-r15
+        mov.l   r5, @-r15
+        mov.l   r6, @-r15
+        mov.l   r7, @-r15
+        mov.l   r8, @-r15
+        mov.l   r9, @-r15
+        mov.l   r10, @-r15
+        mov.l   r11, @-r15
+        mov.l   r12, @-r15
+        mov.l   r13, @-r15
+        mov.l   r14, @-r15
+
+        mov.l    #_OSIntNesting, r1             ; Increment OSIntNesting
+        mov.b   @r1, r0
+        extu.b   r0, r0
+        add      #1, r0
+        mov.b    r0, @r1                        ; If OSIntNesting == 1 save the current stack pointer
+        tst      #1, r0                         ; onto the current task's stack
+        bt       _ProbeRS232BriISR1
+        
+        mov.l    #_OSTCBCur, r1                 ; Save current task's SP into its TCB
+        mov.l   @r1, r0
+        mov      r15, @r0
+
+_ProbeRS232BriISR1:
+        mov.l    #_ProbeRS232_BriISRHandler, r0
+        jsr     @r0                     
+        nop
+        
+        mov.l    #_OSIntExit, r0
+        jsr     @r0                             ; call OSIntExit()
+        nop
+
+; restore all processor registers from new task's stack
+
+        mov.l   @r15+, r14
+        mov.l   @r15+, r13
+        mov.l   @r15+, r12
+        mov.l   @r15+, r11
+        mov.l   @r15+, r10
+        mov.l   @r15+, r9
+        mov.l   @r15+, r8
+        mov.l   @r15+, r7
+        mov.l   @r15+, r6
+        mov.l   @r15+, r5
+        mov.l   @r15+, r4
+        mov.l   @r15+, r3
+        mov.l   @r15+, r2
+        mov.l   @r15+, r1
+        mov.l   @r15+, r0
+        lds.l   @r15+, pr
+        ldc.l   @r15+, gbr
+        lds.l   @r15+, mach
+        lds.l   @r15+, macl
+
+        rte                                     ; return from interrupt
+        nop
+
+_ProbeRS232EriISR:
+; Save processor registers on the stack
+        
+        sts.l   macl, @-r15
+        sts.l   mach, @-r15
+        stc.l   gbr, @-r15
+        sts.l   pr, @-r15
+        mov.l   r0, @-r15
+        mov.l   r1, @-r15
+        mov.l   r2, @-r15
+        mov.l   r3, @-r15
+        mov.l   r4, @-r15
+        mov.l   r5, @-r15
+        mov.l   r6, @-r15
+        mov.l   r7, @-r15
+        mov.l   r8, @-r15
+        mov.l   r9, @-r15
+        mov.l   r10, @-r15
+        mov.l   r11, @-r15
+        mov.l   r12, @-r15
+        mov.l   r13, @-r15
+        mov.l   r14, @-r15
+
+        mov.l    #_OSIntNesting, r1             ; Increment OSIntNesting
+        mov.b   @r1, r0
+        extu.b   r0, r0
+        add      #1, r0
+        mov.b    r0, @r1                        ; If OSIntNesting == 1 save the current stack pointer
+        tst      #1, r0                         ; onto the current task's stack
+        bt       _ProbeRS232EriISR1
+        
+        mov.l    #_OSTCBCur, r1                 ; Save current task's SP into its TCB
+        mov.l   @r1, r0
+        mov      r15, @r0
+
+_ProbeRS232EriISR1:
+        mov.l    #_ProbeRS232_EriISRHandler, r0
+        jsr     @r0                     
+        nop
+        
+        mov.l    #_OSIntExit, r0
+        jsr     @r0                             ; call OSIntExit()
+        nop
+
+; restore all processor registers from new task's stack
+
+        mov.l   @r15+, r14
+        mov.l   @r15+, r13
+        mov.l   @r15+, r12
+        mov.l   @r15+, r11
+        mov.l   @r15+, r10
+        mov.l   @r15+, r9
+        mov.l   @r15+, r8
+        mov.l   @r15+, r7
+        mov.l   @r15+, r6
+        mov.l   @r15+, r5
+        mov.l   @r15+, r4
+        mov.l   @r15+, r3
+        mov.l   @r15+, r2
+        mov.l   @r15+, r1
+        mov.l   @r15+, r0
+        lds.l   @r15+, pr
+        ldc.l   @r15+, gbr
+        lds.l   @r15+, mach
+        lds.l   @r15+, macl
+
+        rte                                     ; return from interrupt
+        nop
+       
+        .END

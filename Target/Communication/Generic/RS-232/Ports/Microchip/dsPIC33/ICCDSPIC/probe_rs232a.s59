@@ -1,0 +1,118 @@
+;
+;********************************************************************************************************
+;                                       uC/Probe Communication
+;
+;                    Copyright 2007-2020 Silicon Laboratories Inc. www.silabs.com
+;
+;                                 SPDX-License-Identifier: APACHE-2.0
+;
+;               This software is subject to an open source license and is distributed by
+;                Silicon Laboratories Inc. pursuant to the terms of the Apache License,
+;                    Version 2.0 available at www.apache.org/licenses/LICENSE-2.0.
+;
+;********************************************************************************************************
+;
+
+;********************************************************************************************************
+;
+;                            dsPIC33 MPLab and IAR iccDSPIC uC/Probe Port
+;
+;
+; File : probe_rs232a.s59
+;********************************************************************************************************
+
+;********************************************************************************************************
+;                                                INCLUDES
+;********************************************************************************************************
+
+#include <io33fj256gp710.h>
+#include <os_cpu_util_a.s59>
+
+;********************************************************************************************************
+;                                                 ASSEMBLER SPECIFICS
+;********************************************************************************************************
+
+    COMMON INTVEC:CODE:ROOT(2)
+
+    ORG     0xA0                                                        ; Place the following code in the UART #2 Rx interrupt vector table location
+    DL      __U2RXInterrupt / 2                                         ; Plug the interrupt table with the UART 2 Rx vector address
+
+    ORG     0xA4                                                        ; Place the following code in the UART #2 Tx interrupt vector table location
+    DL      __U2TXInterrupt / 2                                         ; Plug the interrupt table with the UART 2 Tx vector address
+
+    RSEG CODE:CODE:ROOT(2)
+
+;********************************************************************************************************
+;                                                 GLOBALS
+;********************************************************************************************************
+
+    PUBLIC __U2RXInterrupt
+    PUBLIC __U2TXInterrupt
+
+;********************************************************************************************************
+;                                                 EXTERNALS
+;********************************************************************************************************
+
+    EXTERN  OSIntNesting
+    EXTERN  OSTCBCur
+    EXTERN  OSIntExit
+    EXTERN  ProbeRS232_RxISRHandler
+    EXTERN  ProbeRS232_TxISRHandler
+
+;********************************************************************************************************
+;                                            U2RXInterrupt
+;
+; Description : This function is the UART2 Rx Interrupt Service Routine
+;
+; Notes       : All user interrupts should be defined as shown below.
+;********************************************************************************************************
+
+__U2RXInterrupt:
+    OS_REGS_SAVE                                                        ; 1) Save processor registers
+
+    mov   #OSIntNesting, w1
+    inc.b [w1], [w1]                                                    ; 2) Call OSIntEnter() or increment OSIntNesting
+
+    dec.b OSIntNesting, wreg                                            ; 3) Check OSIntNesting. if OSIntNesting == 1, then save the stack pointer, otherwise jump to T2_Cont
+    bra nz, U2RXCont
+    mov OSTCBCur, w0
+    mov w15, [w0]
+
+U2RXCont:
+    call  ProbeRS232_RxISRHandler                                       ; 4) Call YOUR ISR Handler (May be a C function). In this case, the OSView Rx ISR Handler
+    call  OSIntExit                                                     ; 5) Call OSIntExit() or decrement 1 from OSIntNesting
+
+    OS_REGS_RESTORE                                                     ; 6) Restore registers
+
+    retfie                                                              ; 7) Return from interrupt
+
+;********************************************************************************************************
+;                                            U2TXInterrupt
+;
+; Description : This function is the UART2 Tx Interrupt Service Routine
+;
+; Notes       : All user interrupts should be defined as shown below.
+;********************************************************************************************************
+
+__U2TXInterrupt:
+    OS_REGS_SAVE                                                        ; 1) Save processor registers
+
+    mov   #OSIntNesting, w1
+    inc.b [w1], [w1]                                                    ; 2) Call OSIntEnter() or increment OSIntNesting
+
+    dec.b OSIntNesting, wreg                                            ; 3) Check OSIntNesting. if OSIntNesting == 1, then save the stack pointer, otherwise jump to T2_Cont
+    bra nz, U2TXCont
+    mov OSTCBCur, w0
+    mov w15, [w0]
+
+U2TXCont:
+    call  ProbeRS232_TxISRHandler                                       ; 4) Call YOUR ISR Handler (May be a C function). In this case, the OSView Tx ISR Handler
+    call  OSIntExit                                                     ; 5) Call OSIntExit() or decrement 1 from OSIntNesting
+
+    OS_REGS_RESTORE                                                     ; 6) Restore registers
+
+    retfie                                                              ; 7) Return from interrupt
+
+    END
+
+

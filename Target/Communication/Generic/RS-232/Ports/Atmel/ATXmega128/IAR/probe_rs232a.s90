@@ -1,0 +1,167 @@
+;
+;********************************************************************************************************
+;                                       uC/Probe Communication
+;
+;                    Copyright 2007-2020 Silicon Laboratories Inc. www.silabs.com
+;
+;                                 SPDX-License-Identifier: APACHE-2.0
+;
+;               This software is subject to an open source license and is distributed by
+;                Silicon Laboratories Inc. pursuant to the terms of the Apache License,
+;                    Version 2.0 available at www.apache.org/licenses/LICENSE-2.0.
+;
+;********************************************************************************************************
+;
+
+;
+;********************************************************************************************************
+;
+;                                              uC/Probe
+;
+;                                      Communication: RS-232
+;                                   Port for the Atmel Xmega128
+;
+; Filename : probe_rs232a.s90
+; Version  : V2.30
+;********************************************************************************************************
+;
+
+#include        <os_cpu_i.s90>
+#include        <app_cfg.h>
+#include        <os_cfg.h>
+
+        MODULE  PROBE_RS232_A
+
+;********************************************************************************************************
+;                                         EXTERNAL DECLARATIONS
+;********************************************************************************************************
+
+        EXTERN  OSIntExit
+        EXTERN  OSIntNesting
+        EXTERN  OSTCBCur
+
+        EXTERN  ProbeRS232_RxISRHandler
+        EXTERN  ProbeRS232_TxISRHandler
+
+;********************************************************************************************************
+;                                          PUBLIC DECLARATIONS
+;********************************************************************************************************
+
+        PUBLIC  ProbeRS232_RxISR
+        PUBLIC  ProbeRS232_TxISR
+
+
+;/*$PAGE*/
+;**********************************************************************************************
+;*                                  uC/Probe COM Rx ISR
+;*                                 void ProbeRS232_RxISR(void)
+;*
+;* Description: This function is invoked when a character is received from the serial port
+;*
+;* Arguments  : none
+;*
+;* Note(s)    : 1) Pseudo code:
+;*                 Disable Interrupts
+;*                 Save all registers
+;*                 OSIntNesting++
+;*                 if (OSIntNesting == 1) {
+;*                     OSTCBCur->OSTCBStkPtr = SP
+;*                 }
+;*                 ProbeRS232_RxHandler();
+;*                 OSIntExit();
+;*                 Restore all registers
+;*                 Return from interrupt;
+;**********************************************************************************************
+
+        RSEG    CODE:CODE:NOROOT(1)
+
+ProbeRS232_RxISR:
+        CLI                                                     ; Disable Global Interrupts to avoid breaking context save
+
+        PUSH_ALL                                                ; Save all registers and status register
+        PUSH_SREG_INT                                           ; Save the SREG but with interrupts enabled
+        PUSH_SP                                                 ; Save the task's hardware stack pointer onto task's stack
+
+        LDS     R16,OSIntNesting                                ; Notify uC/OS-II of ISR
+        INC     R16                                             ;
+        STS     OSIntNesting,R16                                ;
+
+        CPI     R16,1                                           ; if (OSIntNesting == 1) {
+        BRNE    ProbeRS232_RxISR_1
+
+        LDS     R30,OSTCBCur                                    ;     OSTCBCur->OSTCBStkPtr = Y
+        LDS     R31,OSTCBCur+1
+        ST      Z+,R28
+        ST      Z+,R29                                          ; }
+
+ProbeRS232_RxISR_1:
+        CALL    ProbeRS232_RxISRHandler                         ; Call tick Handler written in C
+
+        CALL    OSIntExit                                       ; Notify uC/OS-II about end of ISR
+
+        POP_SP                                                  ; Restore the hardware stack pointer from task's stack
+        POP_SREG_INT
+        POP_ALL                                                 ; Restore all registers
+        SEI                                                     ; Enable interrupts, since RETI does not on Xmega
+        RETI
+
+
+;/*$PAGE*/
+;**********************************************************************************************
+;*                                  uC/Probe COM Tx ISR
+;*                                 void ProbeRS232_TxISR(void)
+;*
+;* Description: This function is invoked when a character has been transmitted to the serial port
+;*
+;* Arguments  : none
+;*
+;* Note(s)    : 1) Pseudo code:
+;*                 Disable Interrupts
+;*                 Save all registers
+;*                 OSIntNesting++
+;*                 if (OSIntNesting == 1) {
+;*                     OSTCBCur->OSTCBStkPtr = SP
+;*                 }
+;*                 ProbeRS232_TxHandler();
+;*                 OSIntExit();
+;*                 Restore all registers
+;*                 Return from interrupt;
+;**********************************************************************************************
+
+ProbeRS232_TxISR:
+        CLI                                                     ; Disable Global Interrupts to avoid breaking context save
+
+        PUSH_ALL                                                ; Save all registers and status register
+        PUSH_SREG_INT                                           ; Save the SREG but with interrupts enabled
+        PUSH_SP                                                 ; Save the task's hardware stack pointer onto task's stack
+
+        LDS     R16,OSIntNesting                                ; Notify uC/OS-II of ISR
+        INC     R16                                             ;
+        STS     OSIntNesting,R16                                ;
+
+        CPI     R16,1                                           ; if (OSIntNesting == 1) {
+        BRNE    ProbeRS232_TxISR_1
+
+        LDS     R30,OSTCBCur                                    ;     OSTCBCur->OSTCBStkPtr = Y
+        LDS     R31,OSTCBCur+1
+        ST      Z+,R28
+        ST      Z+,R29                                          ; }
+
+ProbeRS232_TxISR_1:
+        CALL    ProbeRS232_TxISRHandler                         ; Call tick Handler written in C
+
+        CALL    OSIntExit                                       ; Notify uC/OS-II about end of ISR
+
+        POP_SP                                                  ; Restore the hardware stack pointer from task's stack
+        POP_SREG_INT
+        POP_ALL                                                 ; Restore all registers
+        SEI                                                     ; Enable interrupts, since RETI does not on Xmega
+        RETI
+
+
+;$PAGE
+;********************************************************************************************************
+;                                     OS_CPU ASSEMBLY PORT FILE END
+;********************************************************************************************************
+
+                END
